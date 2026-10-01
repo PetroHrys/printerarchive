@@ -8,7 +8,21 @@ const entry: BlogEntry = {
   seoTitle: "From Printed City Guides to Global City Intelligence",
   category: "Digital Publishing",
   topics: ["Information Systems", "Publishing History", "Structured Data"],
-  featured: true,
+  // The article's first plate is a tall 1938 scan with a film border; cards
+  // crop to 3:2, so they use a trimmed landscape cut of the same photograph.
+  cardImage: {
+    src: "/images/blog/from-printed-city-guides-to-global-city-intelligence--card-records-office-1938.jpg",
+    alt: "1938 photograph in the Social Security Board Records Office: one clerk stands at an open drawer of a bank of filing cabinets while another kneels at a lower drawer",
+    width: 1200,
+    height: 800,
+    caption:
+      "The Social Security Board Records Office, Baltimore, 1938 (cropped).",
+    credit: {
+      source: "Library of Congress, via Wikimedia Commons",
+      url: "https://commons.wikimedia.org/wiki/File:The_millions_of_applications_for_social_security_account_numbers_are_handled_in_orderly_manner_in_the_Social_Security_Board_Records_Office._After_the_hour_and_date,_and_the_number_of_each_LCCN2016878120.jpg",
+      license: "Public domain",
+    },
+  },
   description:
     "How city information evolved from printed directories and travel guides into structured digital city intelligence, rankings, comparisons and research platforms.",
   summary:
