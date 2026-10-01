@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Image from "next/image";
 import type { ArchiveImage as ArchiveImageData } from "@/lib/content/types";
 
@@ -11,6 +12,10 @@ interface ArchiveImageProps {
   sizes?: string;
   className?: string;
   noMargin?: boolean;
+  /** Suppress the credit line when a parent caption carries it once. */
+  hideCredit?: boolean;
+  /** Inline style for the <figure>, e.g. a height-aware max-width. */
+  figureStyle?: CSSProperties;
 }
 
 export function ArchiveImage({
@@ -19,12 +24,16 @@ export function ArchiveImage({
   sizes = "(max-width: 768px) 100vw, 768px",
   className = "",
   noMargin = false,
+  hideCredit = false,
+  figureStyle,
 }: ArchiveImageProps) {
   const { src, alt, width, height, caption, credit } = image;
   const margin = noMargin ? "my-0" : "my-8";
+  const showCredit = !hideCredit && Boolean(credit.source);
   return (
     <figure
       className={`${margin} motion-safe:transition-opacity motion-safe:duration-200 motion-safe:hover:opacity-95 ${className}`}
+      style={figureStyle}
     >
       <div className="overflow-hidden rounded-lg border border-rule bg-paper">
         <Image
@@ -39,23 +48,34 @@ export function ArchiveImage({
           style={{ aspectRatio: `${width} / ${height}` }}
         />
       </div>
-      {(caption || credit.source) && (
+      {(caption || showCredit) && (
         <figcaption className="mt-3 px-1 font-sans text-xs leading-5 text-ink-faint">
           {caption ? (
             <span className="block text-ink-soft">{caption}</span>
           ) : null}
-          <span className={caption ? "mt-0.5 block" : "block"}>
-            {credit.url ? (
-              <a href={credit.url} rel="noopener noreferrer nofollow">
-                {credit.source}
-              </a>
-            ) : (
-              credit.source
-            )}
-            {credit.license ? ` · ${credit.license}` : ""}
-          </span>
+          {showCredit ? (
+            <span className={caption ? "mt-0.5 block" : "block"}>
+              <CreditLine credit={credit} />
+            </span>
+          ) : null}
         </figcaption>
       )}
     </figure>
+  );
+}
+
+/** "Source · Licence", the source linked when it has a page. */
+export function CreditLine({ credit }: { credit: ArchiveImageData["credit"] }) {
+  return (
+    <>
+      {credit.url ? (
+        <a href={credit.url} rel="noopener noreferrer nofollow">
+          {credit.source}
+        </a>
+      ) : (
+        credit.source
+      )}
+      {credit.license ? ` · ${credit.license}` : ""}
+    </>
   );
 }

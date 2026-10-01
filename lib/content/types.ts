@@ -14,6 +14,34 @@ export interface ContentRef {
   slug: string;
 }
 
+/** Platforms a product block or product source can point at. */
+export type ProductPlatform = "website" | "ios" | "android";
+
+/**
+ * A reference in an entry's source list.
+ *
+ * Historical and technical sources are the default register. A source marked
+ * `kind: "product"` is a product's own material — its website, store listing
+ * or documentation — cited only for what the product says about itself, and
+ * rendered apart from the historical sources so a reader can tell the two
+ * kinds of evidence apart.
+ *
+ * A product source that IS a registry destination (a store listing, a
+ * product's website) names it through `registry` instead of restating the
+ * URL, so every HELPERG product URL still lives only in
+ * lib/ecosystem/product-registry.ts. `registry` and `url` are exclusive.
+ */
+export interface SourceRef {
+  title: string;
+  url?: string;
+  publisher?: string;
+  kind?: "product";
+  registry?: {
+    product: import("@/lib/products").ProductId;
+    platform: ProductPlatform;
+  };
+}
+
 /**
  * A contextual link rendered inside a paragraph. `anchor` must appear verbatim
  * exactly once in the paragraph's `text`; the renderer splits on it, so no
@@ -72,7 +100,31 @@ export type ContentBlock =
       sources?: string[];
       figureNumber?: string;
     }
-  | { kind: "researchInset"; title: string; items: string[] };
+  | { kind: "researchInset"; title: string; items: string[] }
+  | {
+      /**
+       * Where a product can be used, rendered once, in place, inside the
+       * article. Destinations come from the ecosystem registry — the block
+       * stores no URL — and only platforms the registry marks "available"
+       * render as links. The ownership disclosure is part of the block, so a
+       * post cannot present a publisher product without it.
+       */
+      kind: "productAvailability";
+      product: import("@/lib/products").ProductId;
+      /** What the product does, in verified claims only. */
+      summary: string;
+      /**
+       * Who makes the product and how that relates to PrinterArchive's
+       * publisher, naming the companies the product's own listings or terms
+       * name. Required: the block cannot render without it, and the article
+       * masthead repeats it before any product claim is made.
+       */
+      disclosure: string;
+      /** Optional per-platform label override and detail line. */
+      platforms?: Partial<
+        Record<ProductPlatform, { label?: string; detail?: string }>
+      >;
+    };
 
 export interface BaseEntry {
   section: SectionId;
@@ -90,7 +142,7 @@ export interface BaseEntry {
   cluster?: string;
   related?: ContentRef[];
   faqs?: { q: string; a: string }[];
-  sources?: { title: string; url?: string; publisher?: string }[];
+  sources?: SourceRef[];
   footnotes?: { n: number; text: string }[];
   essayLead?: {
     kicker?: string;
@@ -169,7 +221,7 @@ export interface ModelEntry extends BaseEntry {
    */
   specs?: { label: string; value: string; source: string }[];
   /** Mandatory on model pages: at least one authoritative source. */
-  sources: { title: string; url?: string; publisher?: string }[];
+  sources: SourceRef[];
 }
 
 export type ContentEntry =
@@ -208,6 +260,12 @@ export interface BlogEntry extends Omit<BaseEntry, "section"> {
   topics?: string[];
   /** Marks the hub's lead story. At most one post should set this. */
   featured?: boolean;
+  /**
+   * Image for hub and homepage cards, when the article's own plate does not
+   * survive a landscape crop (a tall portrait, a scan border). Falls back to
+   * the hero, then the first figure.
+   */
+  cardImage?: ArchiveImage;
   /**
    * ISO date on which the post's time-sensitive external claims were last
    * checked against their primary source. Rendered in the editorial note.

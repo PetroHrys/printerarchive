@@ -16,6 +16,7 @@ import { ResearchInset } from "./ResearchInset";
 import { Figure } from "./Figure";
 import { RichText } from "./RichText";
 import { ImageGroup } from "./ImageGroup";
+import { ProductAvailability } from "./ProductAvailability";
 
 const slugify = (s: string) =>
   s
@@ -150,6 +151,16 @@ export function ArticleBody({ blocks }: { blocks: ContentBlock[] }) {
             return <ResearchInset key={i} title={b.title} items={b.items} />;
           case "figure":
             return <Figure key={i} image={b.image} />;
+          case "productAvailability":
+            return (
+              <ProductAvailability
+                key={i}
+                product={b.product}
+                summary={b.summary}
+                disclosure={b.disclosure}
+                platforms={b.platforms}
+              />
+            );
           case "table":
             return (
               <figure key={i} className="premium-card-sm my-8 overflow-x-auto p-3">
