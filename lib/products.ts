@@ -78,13 +78,17 @@ export const PRODUCTS: Record<ProductId, Product> = {
     name: "Smart Printer",
     tagline:
       "Print documents and photos from a phone or tablet to a connected printer.",
-    icon: "/images/products/smart-printer.jpg",
+    icon: "/images/products/smart-printer-app-icon.jpg",
     links: linksFor("smart-printer"),
   },
   "fax-app": {
     id: "fax-app",
-    name: "Fax App",
-    tagline: "Send a document as a fax from a phone, without a fax machine.",
+    // Matches the ecosystem registry's name: the record now spans the web
+    // service and the phone app, so "Fax App" beside "Open on the web" would
+    // describe a capability the app does not have.
+    name: "Fax",
+    tagline:
+      "Send and receive faxes from a phone or a browser, without a fax machine.",
     icon: "/images/products/fax-app.jpg",
     links: linksFor("fax-app"),
   },

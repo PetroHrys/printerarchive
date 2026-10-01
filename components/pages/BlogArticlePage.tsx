@@ -9,6 +9,9 @@ import {
   readingMinutes,
 } from "@/lib/blog/queries";
 import { LongformArticle } from "@/components/pages/LongformArticle";
+import { MetaList } from "@/components/content/MetaList";
+import { publisherDisclosures } from "@/lib/blog/disclosure";
+import { formatDate } from "@/lib/blog/format";
 import {
   blogPostingSchema,
   breadcrumbSchema,
@@ -39,6 +42,7 @@ export function BlogArticlePage({ slug }: { slug: string }) {
   const schemas: object[] = [blogPostingSchema(post), breadcrumbSchema(crumbs)];
   if (post.faqs?.length) schemas.push(faqSchema(post.faqs));
   const minutes = readingMinutes(post);
+  const disclosures = publisherDisclosures(post);
 
   return (
     <LongformArticle
@@ -65,15 +69,28 @@ export function BlogArticlePage({ slug }: { slug: string }) {
           : []),
       ]}
       metaLine={
-        <p className="mt-6 flex flex-wrap gap-x-3 gap-y-1 border-t border-rule pt-4 font-sans text-xs text-ink-faint">
-          <span>By {post.author}</span>
-          <span aria-hidden>·</span>
-          <span>Edited by {post.editor}</span>
-          <span aria-hidden>·</span>
-          <time dateTime={post.published}>Published {post.published}</time>
-          <span aria-hidden>·</span>
-          <span>{minutes} min read</span>
-        </p>
+        <>
+          <p className="mt-6 border-t border-rule pt-4 font-sans text-xs text-ink-faint">
+            <MetaList
+              items={[
+                `By ${post.author}`,
+                `Edited by ${post.editor}`,
+                <time key="published" dateTime={post.published}>
+                  Published {formatDate(post.published)}
+                </time>,
+                `${minutes} min read`,
+              ]}
+            />
+          </p>
+          {/* Shown before any product claim is made: a post that presents
+              the publisher's own product or property says so up front. */}
+          {disclosures.length > 0 ? (
+            <p className="mt-3 max-w-3xl font-sans text-xs leading-5 text-ink-soft text-pretty">
+              <span className="font-semibold text-ink-display">Disclosure.</span>{" "}
+              {disclosures.map((d) => d.text).join(" ")}
+            </p>
+          ) : null}
+        </>
       }
     />
   );

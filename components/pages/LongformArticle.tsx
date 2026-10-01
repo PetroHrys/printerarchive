@@ -11,6 +11,7 @@ import { DeepReadingLinks } from "@/components/content/DeepReadingLinks";
 import { RelatedLinks } from "@/components/content/RelatedLinks";
 import { ModernTools } from "@/components/content/ModernTools";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { sourceCountLabel, sourceCounts } from "@/lib/content/sources";
 
 const slugify = (s: string) =>
   s
@@ -197,7 +198,11 @@ export function LongformArticle({
                     <div>
                       <dt className="tech-label">Sources</dt>
                       <dd className="mt-1 font-sans text-sm text-ink-display tabular-nums">
-                        {e.sources.length}
+                        {/* Split only when product material is cited, so
+                            reference pages keep their bare count. */}
+                        {sourceCounts(e.sources).product > 0
+                          ? sourceCountLabel(e.sources)
+                          : e.sources.length}
                       </dd>
                     </div>
                   ) : null}

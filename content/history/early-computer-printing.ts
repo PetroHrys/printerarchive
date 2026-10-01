@@ -35,7 +35,7 @@ const entry: HistoryEntry = {
       kind: "figure",
       image: {
         src: "/images/history/early-computer-printing--ibm-1401-restoration-lab.jpg",
-        alt: "Restored IBM 1401 installation showing a line printer in the foreground with keypunch machines along one side and tape drives behind",
+        alt: "Restored IBM 1401 installation at the Computer History Museum: IBM 026 card punches and stacks of punched cards in the foreground, an IBM 1403 line printer with fan-fold paper at the back left, tape drives along the rear wall",
         width: 1600,
         height: 1066,
         caption:

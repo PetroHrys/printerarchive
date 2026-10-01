@@ -28,7 +28,8 @@ export type EcosystemSurface =
   | "timeline"
   | "directory-web"
   | "directory-app"
-  | "banner-trigger";
+  | "banner-trigger"
+  | "article-product";
 
 export interface EcosystemProduct {
   id: string;
@@ -487,11 +488,20 @@ export const ECOSYSTEM_APPLICATIONS: EcosystemProduct[] = [
     id: "fax-app",
     name: "Fax",
     shortName: "Fax",
-    description: "Send a document as a fax from a phone, without a fax machine.",
+    // faxb2b.com verified 2026-10-01: HTTP 200, operated by HELPERG LLC per
+    // its Terms, and its own pages link to exactly the two store listings
+    // below as "our mobile fax app". It is the operator's chosen website for
+    // this product, but it is a separate service (faxB2B): its Terms and
+    // Privacy Policy state that they do not cover mobile apps. Anything that
+    // presents this record must not imply a shared account or history. Both
+    // the site and the listings describe sending and receiving, so the
+    // description claims nothing beyond that.
+    description:
+      "Send and receive faxes from a phone or a browser, without a fax machine.",
     category: "application",
     monogram: "FX",
-    websiteUrl: null,
-    websiteStatus: "unknown",
+    websiteUrl: "https://faxb2b.com",
+    websiteStatus: "available",
     webAppUrl: null,
     webAppStatus: "unknown",
     iosUrl: "https://apps.apple.com/app/id6760895885",

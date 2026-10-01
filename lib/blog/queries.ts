@@ -2,6 +2,7 @@ import type { BlogEntry, ContentEntry } from "@/lib/content/types";
 import { allPosts } from "@/lib/blog/registry";
 import { getEntry } from "@/lib/content/queries";
 import { readingMinutes } from "@/lib/blog/reading-time";
+import { comparePosts } from "@/lib/blog/order";
 
 export const BLOG = {
   path: "/blog",
@@ -12,9 +13,8 @@ export const BLOG = {
   lede: "Stories about printing, documents, publishing, information systems, and the technologies that changed how knowledge moves.",
 } as const;
 
-/** Every post, newest published first. */
-export const getPosts = (): BlogEntry[] =>
-  [...allPosts].sort((a, b) => (a.published < b.published ? 1 : -1));
+/** Every post, newest published first (same-day ties: see comparePosts). */
+export const getPosts = (): BlogEntry[] => [...allPosts].sort(comparePosts);
 
 export const getPost = (slug: string): BlogEntry | undefined =>
   allPosts.find((p) => p.slug === slug);

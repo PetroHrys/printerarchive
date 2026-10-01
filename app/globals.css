@@ -30,6 +30,8 @@
   /* Rules */
   --color-rule: #e5e8ed;
   --color-rule-strong: #d3d9e2;
+  /* Hairline for rules drawn on the sepia band (.band-sepia). */
+  --color-rule-sepia: #e8e2d6;
 
   /* Accent — brighter and more contemporary than the previous #075dcc while
      keeping 5.31:1 on the worst surface (spec's #1769e0 measured only 4.65). */
@@ -262,7 +264,7 @@ body {
 }
 .band-sepia {
   background: var(--color-sepia);
-  border-block: 1px solid #e8e2d6;
+  border-block: 1px solid var(--color-rule-sepia);
 }
 
 /* Numbered rule used by index/catalogue surfaces. */

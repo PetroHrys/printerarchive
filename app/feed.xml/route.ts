@@ -1,6 +1,7 @@
 import { site } from "@/lib/site";
 import { allEntries } from "@/lib/content/registry";
 import { allPosts } from "@/lib/blog/registry";
+import { publisherDisclosures } from "@/lib/blog/disclosure";
 
 export const dynamic = "force-static";
 
@@ -11,7 +12,14 @@ export function GET() {
   // The feed represents the archive's latest published work of any kind.
   // Editorial posts and encyclopedia entries share the same item shape — only
   // the path prefix differs — so including posts needs no schema change.
-  const feedItems = [
+  const feedItems: {
+    title: string;
+    description: string;
+    updated: string;
+    path: string;
+    category: string;
+    extraCategory?: string;
+  }[] = [
     ...allEntries.map((e) => ({
       title: e.title,
       description: e.description,
@@ -25,6 +33,10 @@ export function GET() {
       updated: p.updated,
       path: `/blog/${p.slug}`,
       category: p.category,
+      // Stories presenting the publisher's own products or sites carry a
+      // second category, so a feed reader sees the relationship too.
+      extraCategory:
+        publisherDisclosures(p).length > 0 ? "Publisher's ecosystem" : undefined,
     })),
   ];
   const items = [...feedItems]
@@ -36,7 +48,11 @@ export function GET() {
       <link>${site.url}${e.path}</link>
       <guid>${site.url}${e.path}</guid>
       <pubDate>${new Date(e.updated).toUTCString()}</pubDate>
-      <category>${esc(e.category)}</category>
+      <category>${esc(e.category)}</category>${
+        e.extraCategory
+          ? `\n      <category>${esc(e.extraCategory)}</category>`
+          : ""
+      }
       <description>${esc(e.description)}</description>
     </item>`,
     )

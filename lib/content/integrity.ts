@@ -56,6 +56,20 @@ const STATIC_ROUTES = new Set([
   "/models",
 ]);
 
+// Keep VALID_PRODUCT_IDS in sync with ProductId in lib/products.ts.
+const VALID_PRODUCT_IDS = new Set([
+  "zip-rar",
+  "smart-printer",
+  "fax-app",
+  "pdf-editor",
+  "cv-resume",
+  "invoice-maker",
+  "pocket-manager",
+  "esimky",
+]);
+
+const PRODUCT_PLATFORMS = new Set(["website", "ios", "android"]);
+
 /**
  * Pure content-integrity check. Returns a list of human-readable problems;
  * an empty array means the content set is valid. Validates encyclopedia
@@ -183,6 +197,78 @@ export function findContentIssues(entries: ArchiveEntry[]): string[] {
             issues.push(`${key}: archivalTable[${idx}] caption missing or empty`);
           }
         }
+        if (b && (b as { kind?: string }).kind === "productAvailability") {
+          const pb = b as {
+            product?: unknown;
+            summary?: unknown;
+            disclosure?: unknown;
+            platforms?: unknown;
+          };
+          if (typeof pb.disclosure !== "string" || !pb.disclosure.trim()) {
+            issues.push(`${key}: productAvailability[${idx}] disclosure missing`);
+          }
+          if (typeof pb.product !== "string" || !VALID_PRODUCT_IDS.has(pb.product)) {
+            issues.push(
+              `${key}: productAvailability[${idx}] product does not resolve -> ${String(pb.product)}`,
+            );
+          }
+          if (typeof pb.summary !== "string" || !pb.summary.trim()) {
+            issues.push(`${key}: productAvailability[${idx}] summary missing`);
+          }
+          if (pb.platforms !== undefined) {
+            if (!pb.platforms || typeof pb.platforms !== "object") {
+              issues.push(`${key}: productAvailability[${idx}] platforms must be an object`);
+            } else {
+              for (const p of Object.keys(pb.platforms)) {
+                if (!PRODUCT_PLATFORMS.has(p)) {
+                  issues.push(
+                    `${key}: productAvailability[${idx}] unknown platform "${p}"`,
+                  );
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Source shape: a product source names either a URL or a registry
+    // destination, never both; registry destinations must be real ids.
+    const sourceList = (e as { sources?: unknown }).sources;
+    if (Array.isArray(sourceList)) {
+      sourceList.forEach((s, i) => {
+        const src = (s ?? {}) as {
+          title?: unknown;
+          url?: unknown;
+          kind?: unknown;
+          registry?: { product?: unknown; platform?: unknown };
+        };
+        if (typeof src.title !== "string" || !src.title.trim()) {
+          issues.push(`${key}: source[${i}] title missing`);
+        }
+        if (src.kind !== undefined && src.kind !== "product") {
+          issues.push(`${key}: source[${i}] unknown kind "${String(src.kind)}"`);
+        }
+        if (src.registry !== undefined) {
+          if (src.kind !== "product") {
+            issues.push(`${key}: source[${i}] registry source must be kind "product"`);
+          }
+          if (src.url !== undefined) {
+            issues.push(
+              `${key}: source[${i}] restates a URL the registry already holds`,
+            );
+          }
+          const rp = src.registry?.product;
+          const rf = src.registry?.platform;
+          if (typeof rp !== "string" || !VALID_PRODUCT_IDS.has(rp)) {
+            issues.push(`${key}: source[${i}] registry product does not resolve -> ${String(rp)}`);
+          }
+          if (typeof rf !== "string" || !PRODUCT_PLATFORMS.has(rf)) {
+            issues.push(`${key}: source[${i}] registry platform is invalid -> ${String(rf)}`);
+          }
+        } else if (src.kind === "product" && typeof src.url !== "string") {
+          issues.push(`${key}: source[${i}] product source has neither url nor registry`);
+        }
       });
     }
 
@@ -250,17 +336,6 @@ export function findContentIssues(entries: ArchiveEntry[]): string[] {
     }
 
     // modernTools integrity: each id must be a known product.
-    // Keep VALID_PRODUCT_IDS in sync with ProductId in lib/products.ts.
-    const VALID_PRODUCT_IDS = new Set([
-      "zip-rar",
-      "smart-printer",
-      "fax-app",
-      "pdf-editor",
-      "cv-resume",
-      "invoice-maker",
-      "pocket-manager",
-      "esimky",
-    ]);
     const mt = (e as { modernTools?: unknown }).modernTools;
     if (mt !== undefined) {
       if (!Array.isArray(mt)) {
@@ -304,6 +379,25 @@ export function findContentIssues(entries: ArchiveEntry[]): string[] {
       const topics = (e as { topics?: unknown }).topics;
       if (topics !== undefined && !Array.isArray(topics)) {
         issues.push(`${key}: topics must be an array`);
+      }
+      // A post that presents a publisher product must show its evidence: at
+      // least one of the product's own sources, separated from the history.
+      const presentsProduct =
+        Array.isArray(e.body) &&
+        e.body.some(
+          (b) => (b as { kind?: string })?.kind === "productAvailability",
+        );
+      const citesProduct =
+        Array.isArray(src) &&
+        src.some(
+          (s) =>
+            (s as { kind?: unknown })?.kind === "product" ||
+            (s as { registry?: unknown })?.registry !== undefined,
+        );
+      if (presentsProduct && !citesProduct) {
+        issues.push(
+          `${key}: a post with a product block must cite the product's own sources`,
+        );
       }
     }
 
