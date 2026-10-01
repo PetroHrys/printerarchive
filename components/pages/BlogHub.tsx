@@ -10,11 +10,20 @@ import {
   readingMinutes,
 } from "@/lib/blog/queries";
 import { getEntry } from "@/lib/content/queries";
-import type { ArchiveImage, BlogEntry, ContentBlock } from "@/lib/content/types";
+import type {
+  ArchiveImage,
+  BlogEntry,
+  ContentBlock,
+  ContentRef,
+} from "@/lib/content/types";
 import { Container } from "@/components/layout/Container";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { breadcrumbSchema, blogSchema } from "@/lib/seo/schema";
+import { MetaList } from "@/components/content/MetaList";
+import { publisherDisclosures } from "@/lib/blog/disclosure";
+import { formatDate } from "@/lib/blog/format";
+import { sourceCountLabel } from "@/lib/content/sources";
 
 /**
  * Editorial territories the journal covers.
@@ -51,14 +60,17 @@ const THEMES: { title: string; note: string; href: string; hub: string }[] = [
   },
 ];
 
-/** Encyclopedia entries that pair with the journal's current subject matter. */
-const FROM_ARCHIVE: { section: "history" | "guides" | "tools"; slug: string }[] = [
+/**
+ * Encyclopedia entries that pair with the journal's current subject matter —
+ * the reference reading behind each published story, two per story.
+ */
+const FROM_ARCHIVE: ContentRef[] = [
+  { section: "history", slug: "history-of-fax-machines" },
+  { section: "fax", slug: "internet-fax-t37-and-t38" },
+  { section: "guides", slug: "driverless-printing" },
+  { section: "tools", slug: "ipp" },
   { section: "history", slug: "history-of-desktop-publishing" },
   { section: "history", slug: "enterprise-document-management" },
-  { section: "guides", slug: "optical-character-recognition" },
-  { section: "tools", slug: "what-is-pdf" },
-  { section: "history", slug: "paperless-office-prediction" },
-  { section: "guides", slug: "digital-preservation" },
 ];
 
 export function blogHubMetadata(): Metadata {
@@ -77,6 +89,7 @@ export function BlogHub() {
   const archive = FROM_ARCHIVE.map((r) => getEntry(r.section, r.slug)).flatMap(
     (e) => (e ? [e] : []),
   );
+  const categories = categoryCounts(posts);
 
   return (
     <>
@@ -99,41 +112,60 @@ export function BlogHub() {
             PrinterArchive Blog
           </h1>
           <p className="mt-6 max-w-2xl standfirst text-pretty">{BLOG.lede}</p>
-          <p className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-1 meta-line">
-            <span>
-              {posts.length} {posts.length === 1 ? "story" : "stories"}
-            </span>
-            <span aria-hidden>·</span>
-            <span>Essays, not encyclopedia entries</span>
-            <span aria-hidden>·</span>
-            <span>Every claim cited</span>
+          <p className="mt-7 meta-line">
+            <MetaList
+              items={[
+                `${posts.length} ${posts.length === 1 ? "story" : "stories"}`,
+                "Essays, not encyclopedia entries",
+                "Every claim cited",
+              ]}
+            />
           </p>
+          {categories.length > 1 ? (
+            <p className="mt-2 meta-line">
+              <span className="sr-only">Categories: </span>
+              <MetaList
+                items={categories.map(([name, n]) => (
+                  <span key={name}>
+                    {name}{" "}
+                    <span className="tabular-nums text-ink-soft">({n})</span>
+                  </span>
+                ))}
+              />
+            </p>
+          ) : null}
         </Container>
       </div>
 
       {featured ? <FeaturedStory post={featured} /> : null}
 
       {rest.length > 0 ? (
-        <Container width="wide" className="py-[var(--band)]">
-          <p className="kicker">More stories</p>
-          <ul className="mt-6">
-            {rest.map((post) => (
-              <li key={post.slug}>
-                <Link href={`${BLOG.path}/${post.slug}`} className="editorial-row group">
-                  <span className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                    <span className="tech-label min-w-[9rem]">{post.category}</span>
-                    <span className="flex-1 font-sans text-base font-semibold text-ink-display group-hover:text-accent">
-                      {post.title}
-                    </span>
-                    <span className="meta-line shrink-0">
-                      {readingMinutes(post)} min
-                    </span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Container>
+        <section
+          aria-labelledby="latest-stories"
+          className="border-t border-rule"
+        >
+          <Container width="wide" className="py-[var(--band)]">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="kicker">Latest stories</p>
+                <h2 id="latest-stories" className="mt-2 text-section text-balance">
+                  More from the journal
+                </h2>
+              </div>
+            </div>
+            <ul
+              className={`mt-9 grid gap-x-10 gap-y-12 ${
+                rest.length > 1 ? "md:grid-cols-2" : ""
+              }`}
+            >
+              {rest.map((post) => (
+                <li key={post.slug} className="min-w-0">
+                  <StoryCard post={post} />
+                </li>
+              ))}
+            </ul>
+          </Container>
+        </section>
       ) : null}
 
       {/* Editorial territories */}
@@ -203,13 +235,14 @@ export function BlogHub() {
 }
 
 /**
- * The lead story. Asymmetric 60/40 composition with the article's own credited
- * plate — large enough that it cannot be mistaken for a list item.
+ * The lead story. The plate is the larger column, so the lead outranks the
+ * cards below it; on narrow screens the plate comes first, as in the cards.
  */
 function FeaturedStory({ post }: { post: BlogEntry }) {
   const minutes = readingMinutes(post);
-  const plate = post.hero ?? firstFigure(post.body);
+  const plate = cardPlate(post);
   const href = `${BLOG.path}/${post.slug}`;
+  const ecosystem = publisherDisclosures(post).length > 0;
 
   return (
     <section aria-labelledby="featured-story">
@@ -217,9 +250,9 @@ function FeaturedStory({ post }: { post: BlogEntry }) {
         <p id="featured-story" className="kicker">
           Featured story
         </p>
-        <div className="mt-7 grid gap-8 lg:grid-cols-[1.5fr_1fr] lg:gap-14">
+        <div className="mt-7 grid gap-8 lg:grid-cols-[1fr_1.15fr] lg:items-start lg:gap-14">
           <div>
-            <p className="tech-label">{post.category}</p>
+            <StoryLabels category={post.category} ecosystem={ecosystem} />
             <h2 className="mt-3 text-display-sm text-balance">
               <Link href={href} className="text-ink-display no-underline hover:text-accent">
                 {post.title}
@@ -237,19 +270,23 @@ function FeaturedStory({ post }: { post: BlogEntry }) {
                 ))}
               </ul>
             ) : null}
-            <p className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-rule pt-4 meta-line">
-              <span>By {post.author}</span>
-              <span aria-hidden>·</span>
-              <time dateTime={post.published}>{formatDate(post.published)}</time>
-              <span aria-hidden>·</span>
-              <span>{minutes} min read</span>
-              <span aria-hidden>·</span>
-              <span>{post.sources?.length ?? 0} sources</span>
+            <p className="mt-6 border-t border-rule pt-4 meta-line">
+              <MetaList
+                items={[
+                  `By ${post.author}`,
+                  <time key="d" dateTime={post.published}>
+                    {formatDate(post.published)}
+                  </time>,
+                  `${minutes} min read`,
+                  sourceCountLabel(post.sources),
+                ]}
+              />
             </p>
             <p className="mt-7">
               <Link
                 href={href}
-                className="inline-flex items-center gap-2 bg-accent px-5 py-2.5 font-sans text-sm font-semibold text-white no-underline transition-colors hover:bg-accent-hover"
+                aria-label={`Read story: ${post.title}`}
+                className="inline-flex items-center gap-2 bg-accent px-5 py-3 font-sans text-sm font-semibold text-white no-underline transition-colors hover:bg-accent-hover"
               >
                 Read story <span aria-hidden>→</span>
               </Link>
@@ -257,16 +294,18 @@ function FeaturedStory({ post }: { post: BlogEntry }) {
           </div>
 
           {plate ? (
-            <figure className="lg:justify-self-end">
-              <Link href={href} className="block no-underline">
-                <span className="block overflow-hidden border border-rule bg-paper-sunken">
+            <figure className="max-lg:order-first">
+              {/* The title is the story's link; the plate repeats it, so it is
+                  not a second tab stop. */}
+              <Link href={href} className="block no-underline" tabIndex={-1} aria-hidden>
+                <span className="block aspect-[3/2] overflow-hidden border border-rule bg-paper-sunken">
                   <Image
                     src={plate.src}
                     alt={plate.alt}
                     width={plate.width}
                     height={plate.height}
-                    priority
-                    sizes="(max-width: 1024px) 100vw, 38vw"
+                    preload
+                    sizes="(max-width: 1024px) 100vw, 46vw"
                     className="h-full w-full object-cover"
                   />
                 </span>
@@ -285,16 +324,94 @@ function FeaturedStory({ post }: { post: BlogEntry }) {
   );
 }
 
+/**
+ * A secondary story. The image, labels and title read as one unit and the
+ * whole card is a single link (the title, stretched over the card), so a
+ * keyboard or screen-reader user meets each story once, not three times.
+ */
+function StoryCard({ post }: { post: BlogEntry }) {
+  const href = `${BLOG.path}/${post.slug}`;
+  const plate = cardPlate(post);
+  const dek = post.essayLead?.standfirst ?? post.description;
+  const ecosystem = publisherDisclosures(post).length > 0;
+
+  return (
+    <article className="group relative flex h-full flex-col">
+      {plate ? (
+        <div className="aspect-[3/2] overflow-hidden border border-rule bg-paper-sunken">
+          <Image
+            src={plate.src}
+            alt={plate.alt}
+            width={plate.width}
+            height={plate.height}
+            sizes="(max-width: 768px) 100vw, 46vw"
+            className="h-full w-full object-cover"
+          />
+        </div>
+      ) : null}
+      <StoryLabels category={post.category} ecosystem={ecosystem} className="mt-5" />
+      <h3 className="mt-2 font-serif text-[1.5rem] leading-[1.22] text-ink-display text-balance">
+        <Link
+          href={href}
+          className="text-ink-display no-underline after:absolute after:inset-0 after:content-[''] group-hover:text-accent"
+        >
+          {post.title}
+        </Link>
+      </h3>
+      <p className="mb-5 mt-3 text-[0.98rem] leading-7 text-ink-soft text-pretty">
+        {dek}
+      </p>
+      <p className="mt-auto border-t border-rule pt-3 meta-line">
+        <MetaList
+          items={[
+            <time key="d" dateTime={post.published}>
+              {formatDate(post.published)}
+            </time>,
+            `${readingMinutes(post)} min read`,
+            sourceCountLabel(post.sources),
+          ]}
+        />
+      </p>
+    </article>
+  );
+}
+
+/**
+ * Category, plus a plain label when the story presents a product or site of
+ * the publisher's own ecosystem — the article itself carries the disclosure.
+ */
+function StoryLabels({
+  category,
+  ecosystem,
+  className = "",
+}: {
+  category: string;
+  ecosystem: boolean;
+  className?: string;
+}) {
+  return (
+    <p className={`flex flex-wrap gap-x-4 gap-y-1 ${className}`}>
+      <span className="tech-label">{category}</span>
+      {ecosystem ? (
+        <span className="tech-label text-ink-soft">Publisher&rsquo;s ecosystem</span>
+      ) : null}
+    </p>
+  );
+}
+
+/** The image a card shows: the post's card image, hero, or first figure. */
+function cardPlate(post: BlogEntry): ArchiveImage | undefined {
+  return post.cardImage ?? post.hero ?? firstFigure(post.body);
+}
+
+/** Categories in use, most stories first — labels, not routes. */
+function categoryCounts(posts: BlogEntry[]): [string, number][] {
+  const counts = new Map<string, number>();
+  for (const p of posts) counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
 function firstFigure(body: ContentBlock[]): ArchiveImage | undefined {
   for (const b of body) if (b.kind === "figure") return b.image;
   return undefined;
-}
-
-function formatDate(iso: string): string {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 }
